@@ -1,4 +1,4 @@
-# AWS Cloudtrail
+# AWS VPC Flow Logs
 
 ## Usage
 
