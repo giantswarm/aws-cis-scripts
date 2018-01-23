@@ -3,7 +3,7 @@
 ## Usage
 
 ```
-NOTIFICATION_EMAIL=xxx AWS_REGION=xxx AWS_ACCOUNT_ID=xxx create-default-cloud-trail.sh
+NOTIFICATION_EMAIL="email1@domain.com,email2@domain.com" AWS_REGION=xxx AWS_ACCOUNT_ID=xxx create-default-cloud-trail.sh
 ```
 
 ## Description step by step

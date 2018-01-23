@@ -6,6 +6,8 @@ fi
  
 if [[ -z $1 ]]; then
     TRAIL_NAME=$(head -c 64 /dev/urandom | tr -dc a-z0-9)
+else
+    TRAIL_NAME=$1
 fi
 
 set -eu
@@ -21,7 +23,7 @@ aws kms create-alias --alias-name "alias/${TRAIL_NAME}-kms-key" --target-key-id 
 aws kms enable-key-rotation --key-id ${KMS_KEYID}
 aws logs create-log-group --log-group-name "CloudTrail/${TRAIL_NAME}LogGroup"
 cat ./config/CloudWatch_Alarms_for_CloudTrail_API_Activity.json | sed s/{{LOG_GROUP}}/${TRAIL_NAME}LogGroup/g > tmp.json
-aws cloudformation create-stack --stack-name CloudWatchAlarmsForCloudTrail --template-body file://./tmp.json --parameters "ParameterKey=Email,ParameterValue=${NOTIFICATION_EMAIL}"
+aws cloudformation create-stack --stack-name CloudWatchAlarmsForCloudTrail --template-body file://./tmp.json --parameters "ParameterKey=Email,ParameterValue=$(echo $NOTIFICATION_EMAIL | cut -d',' -f 1)"
 rm tmp.json
 LOG_GROUP_ARN=$(aws logs describe-log-groups --log-group-name-prefix CloudTrail/${TRAIL_NAME}LogGroup | jq -r ".logGroups[0].arn")
 
@@ -33,6 +35,16 @@ rm tmp.json
 
 echo Waiting 25 sec
 sleep 25
+TOPIC_ARN=$(aws sns list-topics --query 'Topics[?contains(TopicArn, `CloudWatchAlarmsForCloudTrail-AlarmNotificationTopic`)]' | jq -r ".[0].TopicArn")
+INDEX=0
+mails=$(echo $NOTIFICATION_EMAIL | tr "," "\n")
+for addr in ${mails} 
+do
+    if [[ $INDEX -gt 0 ]]; then
+        aws sns subscribe --topic-arn ${TOPIC_ARN} --protocol "email" --notification-endpoint ${addr}
+    fi
+    INDEX=$((INDEX+1))
+done
 
 aws cloudtrail update-trail --name ${TRAIL_NAME} --is-multi-region-trail --kms-key-id ${KMS_KEYID} --enable-log-file-validation --cloud-watch-logs-log-group-arn "${LOG_GROUP_ARN}" --cloud-watch-logs-role-arn "${LOG_ROLE_ARN}"
 aws cloudtrail put-event-selectors --trail-name ${TRAIL_NAME} --event-selectors '[{ "ReadWriteType": "All", "IncludeManagementEvents":true, "DataResources": [{ "Type": "AWS::S3::Object", "Values": ["arn:aws:s3"] }] }]'
