@@ -1,0 +1,1143 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudTrail API Activity Alarm Template for CloudWatch Logs",
+    "Parameters": {
+        "LogGroupName": {
+            "Type": "String",
+            "Default": "CloudTrail/{{LOG_GROUP}}",
+            "Description": "Enter CloudWatch Logs log group name. Default is CloudTrail/{{LOG_GROUP}}"
+        },
+        "Email": {
+            "Type": "String",
+            "Description": "Email address to notify when an API activity has triggered an alarm"
+        }
+    },
+    "Resources": {
+        "RouteTableChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "RouteTableEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "7056f08a-f278-49e2-bbbf-74c8c86ee2da"
+                }
+            }
+        },
+        "RouteTableChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailRouteTableChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a Security Group.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "RouteTableEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "e43c88d7-c693-42ce-8f77-4d687200b9ab"
+                }
+            }
+        },
+        "AWSConfigChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{($.eventSource = config.amazonaws.com) && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel)||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder))}",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "AWSConfigEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "73f99a03-7744-4281-88c1-57d7048ff142"
+                }
+            }
+        },
+        "AWSConfigChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "AWSConfigChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a AWS Config.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "AWSConfigEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "7409effa-11c9-4ba9-b292-1fed609698c8"
+                }
+            }
+        },
+        "NoMFAConsoleSigninMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = ConsoleLogin) && ($.additionalEventData.MFAUsed != Yes) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "NoMFAConsoleSigninEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "6d7fc092-4323-40a4-897b-8a6fe1a5fa0b"
+                }
+            }
+        },
+        "NoMFAConsoleSigninAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "NoMFAConsoleSignin",
+                "AlarmDescription": "Alarms when Console sign-in without MFA is done.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "NoMFAConsoleSigninEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "98369fcc-cacd-4aed-b169-2c90424ce134"
+                }
+            }
+        },
+        "S3BucketPolicyChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "S3BucketPolicyChangesEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "84df6ffd-a650-4f3d-83d4-70bd148f087e"
+                }
+            }
+        },
+        "S3BucketPolicyChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "S3BucketPolicyChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a S3 Bucket Policy.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "S3BucketPolicyChangesEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "b3e5dc18-97d3-4796-9ca5-35c5012d640f"
+                }
+            }
+        },
+        "DisableOrDeleteCMKMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{($.eventSource = kms.amazonaws.com) && (($.eventName=DisableKey)||($.eventName=ScheduleKeyDeletion))}",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "DisableOrDeleteCMKEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "aeaa50c2-e7dd-46a8-b90c-441cb23a1d78"
+                }
+            }
+        },
+        "DisableOrDeleteCMKAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "DisableOrDeleteCMK",
+                "AlarmDescription": "Alarms when an API call is made to disable or delete a CMK.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "DisableOrDeleteCMKEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "1062f078-c433-40dd-8a71-01ec5b2e5fcd"
+                }
+            }
+        },
+        "RootUsageMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ $.userIdentity.type = Root && $.userIdentity.invokedBy NOT EXISTS && $.eventType != AwsServiceEvent }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "RootUsageEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "0534fd9f-cd05-460a-b789-0c8ea9793642"
+                }
+            }
+        },
+        "RootUsageAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "RootUsage",
+                "AlarmDescription": "Alarms when an API call is made root account.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "RootUsageEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "862896f5-3ccb-4963-9ff4-674b0bf3c097"
+                }
+            }
+        },
+        "SecurityGroupChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "SecurityGroupEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f7464954-ce6e-4c4e-b3b8-7ce5fdfc74ab"
+                }
+            }
+        },
+        "SecurityGroupChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailSecurityGroupChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a Security Group.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "SecurityGroupEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "03c1f7a0-2cab-4ab0-982f-45dc2c1f1cd0"
+                }
+            }
+        },
+        "NetworkAclChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "NetworkAclEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "fa5d5d35-6758-48ca-bec8-ca0fa32eef02"
+                }
+            }
+        },
+        "NetworkAclChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailNetworkAclChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a Network ACL.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "NetworkAclEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "27f36d47-4e47-45e8-a5a2-430dce134458"
+                }
+            }
+        },
+        "GatewayChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "GatewayEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "4099f06d-ff23-4000-b7c8-f9819b204445"
+                }
+            }
+        },
+        "GatewayChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailGatewayChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a Customer or Internet Gateway.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "GatewayEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "3991ed72-da41-4c71-884b-3bf44e269843"
+                }
+            }
+        },
+        "VpcChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "VpcEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "e8c2f502-60b3-47a2-be51-60f016a1fd87"
+                }
+            }
+        },
+        "VpcChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailVpcChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a VPC, VPC peering connection or VPC connection to classic.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "VpcEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f3e1b50d-0783-4c00-bea5-053a4a46d35e"
+                }
+            }
+        },
+        "EC2InstanceChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = RunInstances) || ($.eventName = RebootInstances) || ($.eventName = StartInstances) || ($.eventName = StopInstances) || ($.eventName = TerminateInstances) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "EC2InstanceEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "cd758245-a674-4a8c-a3e2-15689475ab48"
+                }
+            }
+        },
+        "EC2InstanceChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailEC2InstanceChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, terminate, start, stop or reboot an EC2 instance.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "EC2InstanceEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "26c109dd-cbdf-479a-929d-a0ea9a99df1e"
+                }
+            }
+        },
+        "EC2LargeInstanceChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = RunInstances) && (($.requestParameters.instanceType = *.8xlarge) || ($.requestParameters.instanceType = *.4xlarge)) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "EC2LargeInstanceEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "0a17aedd-ddb5-4b81-b830-ebf79eb4f8b3"
+                }
+            }
+        },
+        "EC2LargeInstanceChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailEC2LargeInstanceChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, terminate, start, stop or reboot a 4x or 8x-large EC2 instance.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "EC2LargeInstanceEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f65a549b-46c4-4444-b01b-5daba22ae6d5"
+                }
+            }
+        },
+        "CloudTrailChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "CloudTrailEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "01717701-de24-4a58-8ea3-3bea0cefa32b"
+                }
+            }
+        },
+        "CloudTrailChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailChanges",
+                "AlarmDescription": "Alarms when an API call is made to create, update or delete a CloudTrail trail, or to start or stop logging to a trail.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "CloudTrailEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f6946c2c-dae6-457f-ad2e-18cda3ceab20"
+                }
+            }
+        },
+        "ConsoleSignInFailuresMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.eventName = ConsoleLogin) && ($.errorMessage = \"Failed authentication\") }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "ConsoleSignInFailureCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "ab542b2b-0dfb-4cf5-9c19-cc689924cb0c"
+                }
+            }
+        },
+        "ConsoleSignInFailuresAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailConsoleSignInFailures",
+                "AlarmDescription": "Alarms when an unauthenticated API call is made to sign into the console.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "ConsoleSignInFailureCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "3"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "33caa492-4fe9-4f9b-aaa1-fd3f459b4442"
+                }
+            }
+        },
+        "AuthorizationFailuresMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{ ($.errorCode = \"*UnauthorizedOperation\") || ($.errorCode = \"AccessDenied*\") }",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "AuthorizationFailureCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "9af339a9-fa59-4926-ae3c-4fa11c3abc94"
+                }
+            }
+        },
+        "AuthorizationFailuresAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailAuthorizationFailures",
+                "AlarmDescription": "Alarms when an unauthorized API call is made.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "AuthorizationFailureCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "d10d35b9-0243-47bf-b74a-55afc2e0761a"
+                }
+            }
+        },
+        "IAMPolicyChangesMetricFilter": {
+            "Type": "AWS::Logs::MetricFilter",
+            "Properties": {
+                "LogGroupName": {
+                    "Ref": "LogGroupName"
+                },
+                "FilterPattern": "{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}",
+                "MetricTransformations": [
+                    {
+                        "MetricNamespace": "CloudTrailMetrics",
+                        "MetricName": "IAMPolicyEventCount",
+                        "MetricValue": "1"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "1b1f8ea7-b953-431a-97bd-97cf5b7bbbdd"
+                }
+            }
+        },
+        "IAMPolicyChangesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": "CloudTrailIAMPolicyChanges",
+                "AlarmDescription": "Alarms when an API call is made to change an IAM policy.",
+                "AlarmActions": [
+                    {
+                        "Ref": "AlarmNotificationTopic"
+                    }
+                ],
+                "MetricName": "IAMPolicyEventCount",
+                "Namespace": "CloudTrailMetrics",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": "1",
+                "Period": "300",
+                "Statistic": "Sum",
+                "Threshold": "1"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "5a1b3d30-5afe-4633-bd2e-a37e780a3679"
+                }
+            }
+        },
+        "AlarmNotificationTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "Subscription": [
+                    {
+                        "Endpoint": {
+                            "Ref": "Email"
+                        },
+                        "Protocol": "email"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f2df4cfd-d2cb-4000-8a2e-3aad9080fa38"
+                }
+            }
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "f2df4cfd-d2cb-4000-8a2e-3aad9080fa38": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "5a1b3d30-5afe-4633-bd2e-a37e780a3679": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 180,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "1b1f8ea7-b953-431a-97bd-97cf5b7bbbdd": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 210
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "d10d35b9-0243-47bf-b74a-55afc2e0761a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 180,
+                    "y": 210
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "9af339a9-fa59-4926-ae3c-4fa11c3abc94": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 300,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "33caa492-4fe9-4f9b-aaa1-fd3f459b4442": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 300,
+                    "y": 210
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "ab542b2b-0dfb-4cf5-9c19-cc689924cb0c": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 330
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "f6946c2c-dae6-457f-ad2e-18cda3ceab20": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 180,
+                    "y": 330
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "01717701-de24-4a58-8ea3-3bea0cefa32b": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 300,
+                    "y": 330
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "f65a549b-46c4-4444-b01b-5daba22ae6d5": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 420,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "0a17aedd-ddb5-4b81-b830-ebf79eb4f8b3": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 420,
+                    "y": 210
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "26c109dd-cbdf-479a-929d-a0ea9a99df1e": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 420,
+                    "y": 330
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "cd758245-a674-4a8c-a3e2-15689475ab48": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 450
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "f3e1b50d-0783-4c00-bea5-053a4a46d35e": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 180,
+                    "y": 450
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "e8c2f502-60b3-47a2-be51-60f016a1fd87": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 300,
+                    "y": 450
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "3991ed72-da41-4c71-884b-3bf44e269843": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 420,
+                    "y": 450
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "4099f06d-ff23-4000-b7c8-f9819b204445": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 540,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "27f36d47-4e47-45e8-a5a2-430dce134458": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 540,
+                    "y": 210
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "fa5d5d35-6758-48ca-bec8-ca0fa32eef02": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 540,
+                    "y": 330
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "03c1f7a0-2cab-4ab0-982f-45dc2c1f1cd0": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 540,
+                    "y": 450
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "f7464954-ce6e-4c4e-b3b8-7ce5fdfc74ab": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 570
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "7056f08a-f278-49e2-bbbf-74c8c86ee2da": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 330,
+                    "y": 540
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "e43c88d7-c693-42ce-8f77-4d687200b9ab": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 240,
+                    "y": 540
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "7409effa-11c9-4ba9-b292-1fed609698c8": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 750,
+                    "y": 420
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "6d7fc092-4323-40a4-897b-8a6fe1a5fa0b": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 750
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "98369fcc-cacd-4aed-b169-2c90424ce134": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 660
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "73f99a03-7744-4281-88c1-57d7048ff142": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 750,
+                    "y": 510
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "b3e5dc18-97d3-4796-9ca5-35c5012d640f": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 390,
+                    "y": 690
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "84df6ffd-a650-4f3d-83d4-70bd148f087e": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 480,
+                    "y": 690
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "1062f078-c433-40dd-8a71-01ec5b2e5fcd": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 1020,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "aeaa50c2-e7dd-46a8-b90c-441cb23a1d78": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 840,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "0534fd9f-cd05-460a-b789-0c8ea9793642": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 630,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            }
+        }
+    }
+}
